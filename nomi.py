@@ -1,4 +1,4 @@
-# nomi.py
+# imon.py
 import os
 import asyncio
 import random
@@ -32,6 +32,10 @@ week_day_lower = {
 	'sunday':0,'sun':0,'monday':1,'mon':1,'tuesday':2,'tue':2,'wednesday':3,'wed':3,'thursday':4,'thu':4,'friday':5,'fri':5,'saturday':6,'sat':6
 }
 
+notification_channel = None
+remind_before = 599
+
+
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 creds = None
@@ -49,6 +53,9 @@ if not creds or not creds.valid:
 		pickle.dump(creds, token)
 
 service = build('calendar', 'v3', credentials=creds)
+
+start_time_map = {}
+
 
 def RepresentsInt(s):
 	try: 
@@ -123,9 +130,8 @@ def pretty_events_desc(events, now):
 		cur_date += datetime.timedelta(days=1)
 	return desc
 	
-def pretty_msg_embed(**kwargs):
+def get_events(kwargs):
 	now=kwargs.get('now', None)
-	author=kwargs.get('author', None)
 	query_arg = {}
 	if 'start' in kwargs and kwargs['start'] != None:
 		if 'start_now' in kwargs:
@@ -155,6 +161,12 @@ def pretty_msg_embed(**kwargs):
 			events = events[1:]
 		else:
 			events = events[:-1]
+	return events
+
+def pretty_msg_embed(**kwargs):
+	events = get_events(kwargs)
+	now=kwargs.get('now', None)
+	author=kwargs.get('author', None)
 	embedVar = discord.Embed(color=EMBED_COLOR)
 	if len(events) == 0:
 		embedVar.title = 'Found No Class'
@@ -171,17 +183,19 @@ async def status_task():
 		await bot.change_presence(activity=discord.Game(name='3rd year class routine'))
 		await asyncio.sleep(10)
 		await bot.change_presence(activity=discord.Game(name='type ^help for help'))
-		await asyncio.sleep(10)
+		await asyncio.sleep(15)
 		
 		now = datetime.datetime.utcnow() + datetime.timedelta(hours=5,minutes=30)
 		now_iso = now.isoformat() + '+05:30'
+		try:
+			events_result = service.events().list(calendarId=C_ID, timeMin=now_iso, maxResults=1, singleEvents=True, orderBy='startTime').execute()
+			events = events_result.get('items', [])
+		except:
+			continue
 
-		events_result = service.events().list(calendarId=C_ID, timeMin=now_iso, maxResults=1, singleEvents=True, orderBy='startTime').execute()
-		events = events_result.get('items', [])
-		
 		if len(events) == 0:
 			await bot.change_presence(activity=discord.Game(name=NO_EVENT_MESSAGE))
-			await asyncio.sleep(40)
+			await asyncio.sleep(35)
 			continue
 
 		class_name = events[0]['summary'][0:6]
@@ -199,20 +213,64 @@ async def status_task():
 				await bot.change_presence(activity=discord.Game(name=class_name+' ends in '+pretty_delta(edt-now)))
 		else:
 			await bot.change_presence(activity=discord.Game(name=class_name+' starts in '+pretty_delta(sdt-now)))
-		await asyncio.sleep(40)
+		await asyncio.sleep(35)
 
+async def remind_event(event, notify_channel, subscriber):
+	now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+	start_time = datetime.datetime.strptime(event['start']['dateTime'][0:19], '%Y-%m-%dT%H:%M:%S')
+	if start_time <= now:
+		return
+	delta = start_time - now
+	await asyncio.sleep(max(int(delta.total_seconds()) - remind_before, 0))
+	if (event['start']['dateTime'], event['id']) in start_time_map:
+		now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+		embedVar = discord.Embed(color=0xf7cb0b)
+		embedVar.description = pretty_class_desc(event, now)
+		delay =  (min(int((start_time - now).total_seconds()), remind_before) + 30) // 60
+		embedVar.title = '📢 Next class is about to start in ' + str(delay) + ' min'
+		await notify_channel.send(f'{subscriber.mention}',embed=embedVar)
+	
+async def refresh_events(notify_channel, subscriber):
+	now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+	start_iso = now.isoformat() + '+05:30'
+	end_iso = (now + datetime.timedelta(days=1)).isoformat() + '+05:30'
+	while True:
+		try:
+			events_result = service.events().list(calendarId=C_ID, timeMin=start_iso, timeMax=end_iso, singleEvents=True, orderBy='startTime').execute()
+			break
+		except:
+			await asyncio.sleep(60)
+	events = events_result.get('items', [])
+	for event in events:
+		if event['start']['dateTime'] <= start_iso:
+			continue
+		if (event['start']['dateTime'], event['id']) in start_time_map:
+			if event != start_time_map[(event['start']['dateTime'], event['id'])]:
+				start_time_map[(event['start']['dateTime'], event['id'])] = event
+				asyncio.create_task(remind_event(event, notify_channel, subscriber))
+		else:
+			start_time_map[(event['start']['dateTime'], event['id'])] = event
+			asyncio.create_task(remind_event(event, notify_channel, subscriber))
+
+async def notifiaction_service(notify_channel, subscriber):
+	while True:
+		await refresh_events(notify_channel, subscriber)
+		await asyncio.sleep(300)
+	
 
 @bot.event
 async def on_ready():
 	for guild in bot.guilds:
 		if guild.name == GUILD:
 			break
-
+	subscriber = discord.utils.get(guild.roles, id=755692949052063764)
+	notify_channel = discord.utils.get(guild.text_channels, name="class-notification")
 	print(
 		f'{bot.user} is connected to the following guild:\n'
 		f'{guild.name}(id: {guild.id})\n'
 	)
-	await status_task()
+	asyncio.create_task(status_task())
+	asyncio.create_task(notifiaction_service(notify_channel, subscriber))
 
 @bot.command(name='hello', help='Say hello')
 async def stts(ctx):
