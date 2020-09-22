@@ -2,8 +2,8 @@
 Discord.py Bot to:
 * Automatically notify users before events/classes
 * Search events by date/time/keywords
-* Add/Remove/Modify events (not implemted yet)
-* Google Classroom announcement and assignment deadline reminder (not implemted yet)
+* Add/Remove/Modify events (not implemented yet)
+* Google Classroom announcement and assignment deadline reminder (not implemented yet)
 * bonus (cool memes)
 
 
