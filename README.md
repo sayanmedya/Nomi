@@ -12,4 +12,4 @@ Created using
 * Google Calendar API
 * Google Classroom API
 
-### [Join Support Server](https://discord.gg/MtDWsR)
+### [Join Support Server](https://discord.gg/2pz2b6Q)
