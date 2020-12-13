@@ -21,6 +21,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 C_ID = os.getenv('CALENDER_ID')
+CLIST_API_KEY = os.getenv('CLIST_API_KEY')
 
 EMBED_COLOR = 0x7e76dc
 NO_EVENT_MESSAGE = 'No Class Found'
@@ -431,7 +432,7 @@ async def remind_clist_event(event):
 async def refresh_clist_events():
 	utcnow = datetime.datetime.utcnow()
 	utcnext = utcnow + datetime.timedelta(days=1)
-	url = 'https://clist.by/api/v1/json/contest/?username=sayanmedya&api_key=4b7854b5911aba11abe63cc8cf64a8fc928a55d3' + '&start__gt=' + utcnow.isoformat() + '&start__lt=' + utcnext.isoformat() + '&duration__lte=864000&filtered=true&order_by=start'
+	url = 'https://clist.by/api/v1/json/contest/?username=sayanmedya&api_key=' + CLIST_API_KEY + '&start__gt=' + utcnow.isoformat() + '&start__lt=' + utcnext.isoformat() + '&duration__lte=864000&filtered=true&order_by=start'
 	loop = asyncio.get_event_loop()
 	future = loop.run_in_executor(None, requests.get, url)
 	res = await future
@@ -795,7 +796,7 @@ async def clist(ctx):
 	utcstart = istnow.replace(hour=0,minute=0,second=0) + datetime.timedelta(hours=-5,minutes=-30)
 	#end = start + datetime.timedelta(days=7)
 	
-	url = 'https://clist.by/api/v1/json/contest/?username=CLIST_USERNAME&api_key=CLIST_API_KEY' + '&end__gt=' + utcstart.isoformat() + '&duration__lte=864000&filtered=true&order_by=start'
+	url = 'https://clist.by/api/v1/json/contest/?username=CLIST_USERNAME&api_key=' + CLIST_API_KEY + '&end__gt=' + utcstart.isoformat() + '&duration__lte=864000&filtered=true&order_by=start'
 	loop = asyncio.get_event_loop()
 	future = loop.run_in_executor(None, requests.get, url)
 	res = await future
