@@ -189,7 +189,7 @@ async def remind_clist_event(event):
 async def refresh_clist_events():
 	utcnow = datetime.datetime.utcnow()
 	utcnext = utcnow + datetime.timedelta(days=7)
-	url = 'https://clist.by/api/v1/json/contest/?username=sayanmedya&api_key=4b7854b5911aba11abe63cc8cf64a8fc928a55d3' + '&start__gt=' + utcnow.isoformat() + '&start__lt=' + utcnext.isoformat() + '&duration__lte=86401&filtered=true&order_by=start'
+	url = 'https://clist.by/api/v1/json/contest/?username=' + CLIST_USERNAME + '&api_key=' + CLIST_API_KEY + '&start__gt=' + utcnow.isoformat() + '&start__lt=' + utcnext.isoformat() + '&duration__lte=86401&filtered=true&order_by=start'
 	loop = asyncio.get_event_loop()
 	future = loop.run_in_executor(None, requests.get, url)
 	res = await future
