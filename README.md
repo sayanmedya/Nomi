@@ -5,10 +5,12 @@ Discord.py Bot to:
 * Add/Remove/Modify events (not implemented yet)
 * Google Classroom announcement and assignment deadline reminder
 * Competitive Programming notifications using clist.by API
-* bonus (cool memes)
 
 
-Created using
+Technology Used
 * Asyncio
 * Google Calendar API
 * Google Classroom API
+* clist.by API
+* BeautifulSoup
+* MongoDB
